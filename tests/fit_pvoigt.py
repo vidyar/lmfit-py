@@ -14,7 +14,7 @@ except ImportError:
     HASPYLAB = False
 
 def per_iteration(pars, i, resid, x, *args, **kws):
-    if i < 10 or i % 10 == 0:
+    if i < 2 or i % 20 == 0:
         print( '====== Iteration ', i)
         for p in pars.values():
             print( p.name , p.value)
@@ -57,16 +57,17 @@ data = (pvoigt(x, p_true['amp_g'].value, p_true['cen_g'].value,
 if HASPYLAB:
     pylab.plot(x, data, 'r+')
 
-pfit = [Parameter(name='amp_g', value=10),
-        Parameter(name='amp_g', value=10.0),
-        Parameter(name='cen_g', value=9),
-        Parameter(name='wid_g', value=1),
-        Parameter(name='frac', value=0.50),
-        Parameter(name='amp_l', expr='amp_g'),
-        Parameter(name='cen_l', expr='cen_g'),
-        Parameter(name='wid_l', expr='wid_g'),
-        Parameter(name='line_slope', value=0.0),
-        Parameter(name='line_off', value=0.0)]
+pfit = Parameters()
+pfit.add(name='amp_g', value=10),
+pfit.add(name='amp_g', value=10.0),
+pfit.add(name='cen_g', value=9),
+pfit.add(name='wid_g', value=1),
+pfit.add(name='frac', value=0.50),
+pfit.add(name='amp_l', expr='amp_g'),
+pfit.add(name='cen_l', expr='cen_g'),
+pfit.add(name='wid_l', expr='wid_g'),
+pfit.add(name='line_slope', value=0.0),
+pfit.add(name='line_off', value=0.0)
 
 sigma = 0.021  # estimate of data error (for all data points)
 
@@ -82,10 +83,13 @@ if HASPYLAB:
 
 myfit.leastsq()
 
+
 print(' Nfev = ', myfit.nfev)
 print( myfit.chisqr, myfit.redchi, myfit.nfree)
 
+
 report_fit(myfit.params, modelpars=p_true)
+
 
 fit = residual(myfit.params, x)
 
