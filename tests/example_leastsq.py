@@ -1,7 +1,6 @@
 from lmfit import Parameters, minimize, report_fit
 
 from numpy import linspace, zeros, sin, exp, random, sqrt, pi, sign
-from scipy.optimize import leastsq
 
 try:
     import pylab
@@ -35,25 +34,29 @@ noise = random.normal(scale=0.7215, size=n)
 x     = linspace(xmin, xmax, n)
 data  = residual(p_true, x) + noise
 
-fit_params = Parameters()
-fit_params.add('amp', value=13.0)
-fit_params.add('period', value=2)
-fit_params.add('shift', value=0.0)
-fit_params.add('decay', value=0.02)
+pars = Parameters()
+pars.add('amp', value=9.0, min=5, max=20)
+pars.add('period', value=3., min=1., max=7)
+pars.add('shift', value=-.10,  min=-0.2, max=0.2)
+pars.add('decay', value=2.e-3, min=0, max=0.1)
 
-out = minimize(residual, fit_params, args=(x,), kws={'data':data})
+init = residual(pars, x)
 
-fit = residual(fit_params, x)
+out = minimize(residual, pars, method='leastsq', args=(x,), kws={'data':data})
 
-print ' N fev = ', out.nfev
-print out.chisqr, out.redchi, out.nfree
+fit = residual(out.params, x)
 
-print '### Error Report:'
-report_fit(fit_params)
+for name, par in out.params.items():
+    nout = "%s:%s" % (name, ' '*(20-len(name)))
+    print "%s: %s (%s) " % (nout, par.value, p_true[name].value)
 
+print out.chisqr,  out.nfree
+#
+report_fit(out.params, modelpars=p_true)
 
 if HASPYLAB:
-    pylab.plot(x, data, 'ro')
+    pylab.plot(x, data, 'r--')
+    pylab.plot(x, init, 'k')
     pylab.plot(x, fit, 'b')
     pylab.show()
 
