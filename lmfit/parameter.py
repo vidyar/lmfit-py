@@ -12,6 +12,7 @@ from . import uncertainties
 
 from .astutils import valid_symbol_name
 
+
 class Parameters(OrderedDict):
     """a custom dictionary of Parameters.  All keys must be
     strings, and valid Python symbol names, and all values
@@ -62,6 +63,7 @@ class Parameters(OrderedDict):
         for para in parlist:
             self.add(*para)
 
+
 class Parameter(object):
     """A Parameter is the basic Parameter going
     into Fit Model.  The Parameter holds many attributes:
@@ -78,7 +80,7 @@ class Parameter(object):
         self.max = max
         self.vary = vary
         self.expr = expr
-        self.deps   = None
+        self.deps = None
         self.stderr = None
         self.correl = None
         self._init_bounds()
@@ -136,17 +138,17 @@ class Parameter(object):
         """
         if self.min in (None, -inf) and self.max in (None, inf):
             self.from_internal = lambda val: val
-            _val  = self._val
+            _val = self._val
         elif self.max in (None, inf):
             self.from_internal = lambda val: self.min - 1 + sqrt(val*val + 1)
-            _val  = sqrt((self._val - self.min + 1)**2 - 1)
+            _val = sqrt((self._val - self.min + 1)**2 - 1)
         elif self.min in (None, -inf):
             self.from_internal = lambda val: self.max + 1 - sqrt(val*val + 1)
-            _val  = sqrt((self.max - self._val + 1)**2 - 1)
+            _val = sqrt((self.max - self._val + 1)**2 - 1)
         else:
             self.from_internal = lambda val: self.min + (sin(val) + 1) * \
-                                 (self.max - self.min) / 2
-            _val  = arcsin(2*(self._val - self.min)/(self.max - self.min) - 1)
+                (self.max - self.min) / 2
+            _val = arcsin(2*(self._val - self.min)/(self.max - self.min) - 1)
         return _val
 
     def scale_gradient(self, val):
@@ -162,17 +164,16 @@ class Parameter(object):
         else:
             return cos(val) * (self.max - self.min) / 2.0
 
-
     def _getval(self):
         """get value, with bounds applied"""
-        if (self._val is not nan and
-            isinstance(self._val, uncertainties.Variable)):
+        if self._val is not nan and isinstance(self._val,
+                                               uncertainties.Variable):
             self._val = self._val.nominal_value
 
         if self.min is None:
             self.min = -inf
         if self.max is None:
-            self.max =  inf
+            self.max = inf
         if self.max < self.min:
             self.max, self.min = self.min, self.max
 
@@ -194,6 +195,7 @@ class Parameter(object):
     def value(self, val):
         "set value"
         self._val = val
+
     def __str__(self):
         "string"
         return self.__repr__()
@@ -282,6 +284,7 @@ class Parameter(object):
     def __eq__(self, other):
         "=="
         return self._getval() == other
+
     def __ne__(self, other):
         "!="
         return self._getval() != other
@@ -319,8 +322,8 @@ class Parameter(object):
         "- (right)"
         return other - self._getval()
 
+
 def isParameter(x):
     "test for Parameter-ness"
     return (isinstance(x, Parameter) or
             x.__class__.__name__ == 'Parameter')
-
