@@ -45,5 +45,5 @@ params.add(name="c", value=0.0, vary=False)
 
 lin_reg = lmfit.minimize(linear_chisq, params, args=(x, y))
 
-lmfit.report_fit(params)
+lmfit.report_fit(lin_reg.params)
 
