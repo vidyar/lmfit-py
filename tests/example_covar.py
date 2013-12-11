@@ -64,7 +64,7 @@ myfit.prepare_fit()
 for scale_covar in (True, False):
     myfit.scale_covar = scale_covar
     print '  ====  scale_covar = ', myfit.scale_covar, ' ==='
-    for sigma in (0.1, 0.2, 0.23, 0.5):
+    for sigma in (0.05, 0.2, 0.5):
         myfit.userkws['sigma'] = sigma
 
         p_fit['amp_g'].value  = 10
@@ -78,7 +78,7 @@ for scale_covar in (True, False):
         print '  chisqr         = ', myfit.chisqr
         print '  reduced_chisqr = ', myfit.redchi
 
-        report_fit(p_fit, modelpars=p_true, show_correl=False)
+        report_fit(myfit.params, modelpars=p_true, show_correl=False)
         print '  =============================='
 
 
