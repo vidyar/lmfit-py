@@ -11,6 +11,7 @@ function-to-be-minimized (residual function) in terms of these Parameters.
    <newville@cars.uchicago.edu>
 """
 
+from copy import deepcopy
 import numpy as np
 from numpy import (dot, eye, ndarray, ones_like,
                    sqrt, take, transpose, triu)
@@ -37,6 +38,7 @@ from .parameter import Parameter, Parameters
 # use locally modified version of uncertainties package
 from . import uncertainties
 
+
 def asteval_with_uncertainties(*vals,  **kwargs):
     """
     given values for variables, calculate object value.
@@ -44,21 +46,20 @@ def asteval_with_uncertainties(*vals,  **kwargs):
     the uncertainty in an object even with a complicated
     expression.
     """
-    _obj   = kwargs.get('_obj', None)
-    _pars  = kwargs.get('_pars', None)
+    _obj = kwargs.get('_obj', None)
+    _pars = kwargs.get('_pars', None)
     _names = kwargs.get('_names', None)
     _asteval = kwargs.get('_asteval', None)
-    if (_obj is None or
-        _pars is None or
-        _names is None or
-        _asteval is None or
-        _obj.ast is None):
+
+    if (_obj is None or _pars is None or _names is None or
+            _asteval is None or _obj.ast is None):
         return 0
     for val, name in zip(vals, _names):
         _asteval.symtable[name] = val
     return _asteval.eval(_obj.ast)
 
 wrap_ueval = uncertainties.wrap(asteval_with_uncertainties)
+
 
 def eval_stderr(obj, uvars, _names, _pars, _asteval):
     """evaluate uncertainty and set .stderr for a parameter `obj`
@@ -78,6 +79,7 @@ def eval_stderr(obj, uvars, _names, _pars, _asteval):
     except:
         obj.stderr = 0
 
+
 class MinimizerException(Exception):
     """General Purpose Exception"""
     def __init__(self, msg):
@@ -86,6 +88,7 @@ class MinimizerException(Exception):
 
     def __str__(self):
         return "\n%s" % (self.msg)
+
 
 def check_ast_errors(error):
     """check for errors derived from asteval, raise MinimizerException"""
@@ -99,8 +102,8 @@ def check_ast_errors(error):
 class Minimizer(object):
     """general minimizer"""
     err_nonparam = \
-     "params must be a minimizer.Parameters() instance or list of Parameters()"
-    err_maxfev   = """Too many function calls (max set to  %i)!  Use:
+    "params must be a list of Parameter()s or instance of Parameters()"
+    err_maxfev = """Too many function calls (max set to  %i)!  Use:
     minimize(func, params, ...., maxfev=NNN)
 or set  leastsq_kws['maxfev']  to increase this maximum."""
 
@@ -191,9 +194,8 @@ or set  leastsq_kws['maxfev']  to increase this maximum."""
 
         modified 02-01-2012 by Glenn Jones, Aberystwyth University
         """
-        for varname, val in zip(self.var_map, fvars):
-            # self.params[varname].value = val
-            self.params[varname].value = self.params[varname].from_internal(val)
+        for vname, val in zip(self.var_map, fvars):
+            self.params[vname].value = self.params[vname].from_internal(val)
 
         self.nfev = self.nfev + 1
         self.update_constraints()
@@ -204,7 +206,7 @@ or set  leastsq_kws['maxfev']  to increase this maximum."""
         """ set internal self.params from a Parameters object or
         a list/tuple of Parameters"""
         if params is None or isinstance(params, Parameters):
-            self.params = params
+            _params = params
         elif isinstance(params, (list, tuple)):
             _params = Parameters()
             for _par in params:
@@ -212,9 +214,9 @@ or set  leastsq_kws['maxfev']  to increase this maximum."""
                     raise MinimizerException(self.err_nonparam)
                 else:
                     _params[_par.name] = _par
-            self.params = _params
         else:
             raise MinimizerException(self.err_nonparam)
+        self.params = deepcopy(_params)
 
     def penalty(self, params):
         """penalty function for scalar minimizers:
@@ -232,12 +234,13 @@ or set  leastsq_kws['maxfev']  to increase this maximum."""
         # and which are defined expressions.
         if params is None and self.params is not None and self.__prepared:
             return
-        if params is not None and self.params is None:
+        if params is not None:
             self.__set_params(params)
         self.nfev = 0
         self.var_map = []
         self.vars = []
-        self.vmin, self.vmax = [], []
+        self.vmin = []
+        self.vmax = []
         for name, par in self.params.items():
             if par.expr is not None:
                 par.ast = self.asteval.parse(par.expr)
@@ -247,15 +250,11 @@ or set  leastsq_kws['maxfev']  to increase this maximum."""
                 self.namefinder.names = []
                 self.namefinder.generic_visit(par.ast)
                 for symname in self.namefinder.names:
-                    if (symname in self.params and
-                        symname not in par.deps):
+                    if symname in self.params and symname not in par.deps:
                         par.deps.append(symname)
             elif par.vary:
                 self.var_map.append(name)
                 self.vars.append(par.setup_bounds())
-                # self.vars.append(par.set_internal_value())
-                #self.vmin.append(par.min)
-                #self.vmax.append(par.max)
 
             self.asteval.symtable[name] = par.value
             par.init_value = par.value
@@ -270,12 +269,15 @@ or set  leastsq_kws['maxfev']  to increase this maximum."""
         self.update_constraints()
         self.__prepared = True
 
-    def unprepare_fit(self):
-        """unprepare fit, so that subsequent fits will be
-        forced to run re-prepare the fit
-
-        removes ast compilations of constraint expressions
+    def post_fit(self):
+        """finalize outputs from a fit, this does the following:
+        a) making a copy of parameters, so that .params is not
+           a reference to the passed in parameters.
+        b) 'unpreparing the fit', so that subsequent fits will
+           be forced to re-run prepare_fit().  Notably, unpreparing
+           deletes the ast representation of constraint expressions.
         """
+
         self.__prepared = False
         for par in self.params.values():
             if hasattr(par, 'ast'):
@@ -291,14 +293,14 @@ or set  leastsq_kws['maxfev']  to increase this maximum."""
 
         self.prepare_fit()
         sakws = dict(full_output=1, schedule=sched,
-                     maxiter = 2000 * (self.nvarys + 1))
+                     maxiter=2000*(self.nvarys+1))
 
         sakws.update(self.kws)
         sakws.update(kws)
         print("WARNING:  scipy anneal appears unusable!")
         saout = scipy_anneal(self.penalty, self.vars, **sakws)
         self.sa_out = saout
-        self.unprepare_fit()
+        self.post_fit()
         return
 
     def lbfgsb(self, **kws):
@@ -307,17 +309,15 @@ or set  leastsq_kws['maxfev']  to increase this maximum."""
         """
         self.prepare_fit()
         lb_kws = dict(factr=1000.0, approx_grad=True, m=20,
-                      maxfun = 2000 * (self.nvarys + 1),
-                      # bounds = zip(self.vmin, self.vmax),
-                      )
+                      maxfun=2000*(self.nvarys+1))
         lb_kws.update(self.kws)
         lb_kws.update(kws)
 
         xout, fout, info = scipy_lbfgsb(self.penalty, self.vars, **lb_kws)
-        self.nfev =  info['funcalls']
+        self.nfev = info['funcalls']
         self.message = info['task']
         self.chisqr = (self.penalty(xout)**2).sum()
-        self.unprepare_fit()
+        self.post_fit()
         return
 
     def fmin(self, **kws):
@@ -327,17 +327,18 @@ or set  leastsq_kws['maxfev']  to increase this maximum."""
         self.prepare_fit()
         fmin_kws = dict(full_output=True, disp=False, retall=True,
                         ftol=1.e-4, xtol=1.e-4,
-                        maxfun = 5000 * (self.nvarys + 1))
+                        maxfun=5000*(self.nvarys+1))
 
         fmin_kws.update(kws)
         ret = scipy_fmin(self.penalty, self.vars, **fmin_kws)
         xout, fout, iter, funccalls, warnflag, allvecs = ret
-        self.nfev =  funccalls
+        self.nfev = funccalls
         self.chisqr = (self.penalty(xout)**2).sum()
-        self.unprepare_fit()
+        self.post_fit()
         return
 
-    def scalar_minimize(self, method='Nelder-Mead', hess=None, tol=None, **kws):
+    def scalar_minimize(self, method='Nelder-Mead', hess=None,
+                        tol=None, **kws):
         """use one of the scaler minimization methods from scipy.
         Available methods include:
           Nelder-Mead
@@ -360,7 +361,7 @@ or set  leastsq_kws['maxfev']  to increase this maximum."""
         for those designed to use bounds.
 
         """
-        if not HAS_SCALAR_MIN :
+        if not HAS_SCALAR_MIN:
             raise NotImplementedError
 
         self.prepare_fit()
@@ -379,7 +380,7 @@ or set  leastsq_kws['maxfev']  to increase this maximum."""
         self.message = ret.message
         self.nfev = ret.nfev
         self.chisqr = (self.penalty(xout)**2).sum()
-        self.unprepare_fit()
+        self.post_fit()
         return
 
     def leastsq(self, **kws):
@@ -427,7 +428,7 @@ or set  leastsq_kws['maxfev']  to increase this maximum."""
         else:
             self.message = 'Tolerance seems to be too small.'
 
-        self.nfev =  infodict['nfev']
+        self.nfev = infodict['nfev']
         self.ndata = len(resid)
 
         sum_sqr = (resid**2).sum()
@@ -442,11 +443,11 @@ or set  leastsq_kws['maxfev']  to increase this maximum."""
 
         # ensure that _best, vbest, and grad are not
         # broken 1-element ndarrays.
-        if len(np.shape(_best))==0:
+        if len(np.shape(_best)) == 0:
             _best = np.array([_best])
-        if len(np.shape(vbest))==0:
+        if len(np.shape(vbest)) == 0:
             vbest = np.array([vbest])
-        if len(np.shape(grad))==0:
+        if len(np.shape(grad)) == 0:
             grad = np.array([grad])
 
         for ivar, varname in enumerate(self.var_map):
@@ -478,9 +479,9 @@ or set  leastsq_kws['maxfev']  to increase this maximum."""
                 par.stderr = sqrt(self.covar[ivar, ivar])
                 par.correl = {}
                 for jvar, varn2 in enumerate(self.var_map):
+                    den = par.stderr*sqrt(self.covar[jvar, jvar])
                     if jvar != ivar:
-                        par.correl[varn2] = (self.covar[ivar, jvar]/
-                             (par.stderr * sqrt(self.covar[jvar, jvar])))
+                        par.correl[varn2] = self.covar[ivar, jvar]/den
 
             uvars = None
             if has_expr:
@@ -508,8 +509,9 @@ or set  leastsq_kws['maxfev']  to increase this maximum."""
             self.message = '%s. Could not estimate error-bars'
 
         np.seterr(**orig_warn_settings)
-        self.unprepare_fit()
+        self.post_fit()
         return self.success
+
 
 def minimize(fcn, params, method='leastsq', args=None, kws=None,
              scale_covar=True, engine=None, iter_cb=None, **fit_kws):
@@ -554,4 +556,3 @@ def minimize(fcn, params, method='leastsq', args=None, kws=None,
     if fitfunction is not None:
         fitfunction(**kwargs)
     return fitter
-
