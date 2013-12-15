@@ -1,6 +1,6 @@
 import numpy as np
 from lmfit.models1d import LinearModel, QuadraticModel, ExponentialModel
-from lmfit.models1d import  LorenztianModel, GaussianModel, VoigtModel
+from lmfit.models1d import  LorentzianModel, GaussianModel, VoigtModel
 import matplotlib.pyplot as plt
 
 
@@ -25,7 +25,7 @@ dat = off +slo*x + amp*sca* np.exp(-(x-cen)**2 / (2*sig)**2) + noise
 
 mod = GaussianModel(background='quad')
 mod = VoigtModel(background='quad')
-mod = LorenztianModel(background='quad')
+mod = LorentzianModel(background='quad')
 mod.guess_starting_values(dat, x, negative=False)
 mod.params['bkg_offset'].value=min(dat)
 

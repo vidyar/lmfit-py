@@ -8,7 +8,6 @@ y = data[:, 1]
 
 model = GaussianModel()
 model.guess_starting_values(y, x=x)
-# model.params['amplitude'].value=6.0
 
 init_fit = model.model(x=x)
 model.fit(y, x=x)
