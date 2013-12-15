@@ -47,11 +47,28 @@ You can see here that the model created Parameters named 'amplitude',
 'center', 'fwhm', and 'sigma' for the Gaussian model.
 
 You can also see from the results that the starting guess were a pretty
-good estimate for this simple data set.  In fact, it's generally possible
-to not bother running :meth:`guess_starting_values` explicitly.  If this
-method has not been run already, :meth:`fit` will run it for you. Good
-reasons to run this method yourself are if want to save the initial
-estimate of the data, or to alter the starting values by hand.
+good estimate for this simple data set.  In fact, for simple cases such as
+the one shown, it generally possible to not bother running
+:meth:`guess_starting_values` explicitly -- if this method has not been run
+already, :meth:`fit` will run it for you.  Of course, there are good
+reasons to run this method yourself, such as wanting to save the initial
+estimate of the data (as above).  In addition, you can create a fitting
+model and apply it to several different data sets.  In this case, running
+:meth:`guess_starting_values` explicitly for each new data set will
+(generally) provide improve starting value.
+
+Or, you may want to alter the starting values or change the settings for
+the Parameters by hand.  To explicitly alter the fitting parameters used,
+you can access the ``models.params`` object, which holds the Parameters for
+the model::
+
+    model = GaussianModel()
+    model.params['amplitude'].value = 6.0
+    model.params['amplitude'].min  = 1.0
+
+Note that, by default the 'amplitude' and 'center' Parameters for the
+"peak-like" models will be left unbounded, but the 'sigma' Parameter will
+have a lower bound of 0.
 
 classes in the :mod:`models1d` module
 =======================================
