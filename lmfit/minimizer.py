@@ -200,24 +200,18 @@ or set  leastsq_kws['maxfev']  to increase this maximum."""
     def __set_params(self, params):
         """ set internal self.params from a Parameters object or
         a list/tuple of Parameters"""
-        print("   _set_params ", isinstance(params, Parameters), params)
         if params is None or isinstance(params, Parameters):
-            print(" A")
             self.params = params
         elif isinstance(params, (list, tuple)):
-            print(" B")
             _params = Parameters()
             for _par in params:
-                print("  Bx " , isinstance(_par, Parameter), _par)
                 if not isinstance(_par, Parameter):
                     raise MinimizerException(self.err_nonparam)
                 else:
                     _params[_par.name] = _par
             self.params = _params
         else:
-            print(" C")
             raise MinimizerException(self.err_nonparam)
-        print(" D")
 
     def penalty(self, params):
         """penalty function for scalar minimizers:
@@ -235,7 +229,7 @@ or set  leastsq_kws['maxfev']  to increase this maximum."""
         # and which are defined expressions.
         if params is None and self.params is not None and self.__prepared:
             return
-        if params is not None:
+        if params is not None and self.params is None:
             self.__set_params(params)
         self.nfev = 0
         self.var_map = []
@@ -279,7 +273,6 @@ or set  leastsq_kws['maxfev']  to increase this maximum."""
            deletes the ast representation of constraint expressions.
         """
         self.params = deepcopy(self.params)
-
         self.__prepared = False
         for par in self.params.values():
             if hasattr(par, 'ast'):
@@ -414,11 +407,8 @@ or set  leastsq_kws['maxfev']  to increase this maximum."""
         # suppress runtime warnings during fit and error analysis
         orig_warn_settings = np.geterr()
         np.seterr(all='ignore')
-        print 'Before ', self.vars
         lsout = scipy_leastsq(self.__residual, self.vars, **lskws)
-        print 'After ', self.vars, type(self.vars)
         _best, _cov, infodict, errmsg, ier = lsout
-        print 'After ', _best
 
         self.residual = resid = infodict['fvec']
         self.ier = ier
