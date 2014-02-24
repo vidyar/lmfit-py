@@ -30,6 +30,8 @@ def gaussian(x, center=0.0, sigma=1.0):
     return 1.0/(sigma*sqrt2pi) * exp(-(x-center)**2 /(2*sigma**2))
 
 
+normalized_gaussian = gaussian
+
 def lorentzian(x, center=0.0, sigma=1.0):
     """Lorentzian / Cauchy lineshape, 1 dimensional
 
