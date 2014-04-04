@@ -3,7 +3,6 @@ Utility mathematical functions and common lineshapes for minimizer
 """
 import numpy as np
 from numpy import pi, log, exp, sqrt
-from numpy.testing import assert_allclose
 
 from scipy.special import gamma, gammaln, beta, betaln, erf, erfc, wofz
 
@@ -276,10 +275,3 @@ def quadratic(x, offset=0.0, slope=0.0, quad=0.0):
     return offset + slope * x + quad * x**2
 
 parabolic = quadratic
-
-
-def assert_results_close(actual, desired, rtol=1e-03, atol=1e-03,
-                         err_msg='', verbose=True):
-    for param_name, value in desired.items():
-        assert_allclose(actual[param_name], value, rtol, atol,
-                        err_msg, verbose)
