@@ -56,5 +56,6 @@ script:
     -   cd doc
     -   make html
     - fi
+
 notifications:
   email: false
